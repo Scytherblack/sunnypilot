@@ -190,6 +190,10 @@
     "title": "Controls Ready",
     "description": ""
   },
+  "CrvAccelLimit": {
+    "title": "CR-V Acceleration Limit",
+    "description": "Caps planned acceleration (table in crv_accel_limit.py). Braking limits unchanged."
+  },
   "CurrentBootlog": {
     "title": "Current Bootlog",
     "description": ""
