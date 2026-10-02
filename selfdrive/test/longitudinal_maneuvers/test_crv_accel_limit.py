@@ -1,5 +1,5 @@
-"""CR-V acceleration limit (CrvAccelLimit): the planner never asks for more than the eco table,
-launches included, and braking is untouched.
+"""CR-V acceleration limit (CrvAccelLimit, "virtual pedal"): the planner never asks for more than the
+car gives at the chosen held pedal position (or the floor), launches included, and braking is untouched.
 
 Regenerate the stock reference ONLY on code without the limit:
   python selfdrive/test/longitudinal_maneuvers/test_crv_accel_limit.py
@@ -21,7 +21,7 @@ from openpilot.selfdrive.test.longitudinal_maneuvers.maneuver import Maneuver
 from openpilot.selfdrive.test.longitudinal_maneuvers.plant import Plant
 from openpilot.selfdrive.test.longitudinal_maneuvers.test_longitudinal import create_maneuvers
 
-HARD_LIMIT = 0.67  # m/s^2, the owner's limit
+STOCK_LAUNCH_MAX = 1.6  # m/s^2, stock planner ceiling at standstill
 REF = Path(__file__).with_name("crv_stock_ref.npz")
 T, V, A = 0, 3, 5  # columns of a maneuver log row: t, x, x_lead, v, v_lead, a, d_rel
 
@@ -49,34 +49,80 @@ def run(name, enabled=None):
 
 @pytest.mark.parametrize("name", ["resume", "zero_to_cruise", "fast_lead_launch"])
 def test_accel_never_above_cap(name):
-  from openpilot.sunnypilot.selfdrive.controls.lib.crv_accel_limit import CRV_ACCEL_MAX_BP, CRV_ACCEL_MAX_VALS
+  from openpilot.sunnypilot.selfdrive.controls.lib.crv_accel_limit import DEFAULT_FLOOR, DEFAULT_PEDAL, pedal_accel
+  from openpilot.selfdrive.controls.lib.longitudinal_planner import get_max_accel
   logs = run(name, True)
-  assert logs[:, A].max() <= HARD_LIMIT + 1e-6
   # each step was planned at the speed of the previous row
-  assert np.all(logs[1:, A] <= np.interp(logs[:-1, V], CRV_ACCEL_MAX_BP, CRV_ACCEL_MAX_VALS) + 1e-6)
+  v_prev = logs[:-1, V]
+  cap = np.array([min(get_max_accel(v), max(DEFAULT_FLOOR, pedal_accel(v, DEFAULT_PEDAL))) for v in v_prev])
+  assert np.all(logs[1:, A] <= cap + 1e-6)
+  assert logs[:, A].max() <= STOCK_LAUNCH_MAX + 1e-6
+
+
+def test_cap_follows_the_pedal_curve():
+  from openpilot.sunnypilot.selfdrive.controls.lib.crv_accel_limit import CrvAccelLimit
+  Params().put_bool("CrvAccelLimit", True)
+  lim = CrvAccelLimit()
+  launch, mid, cruise = lim.max_accel(2.0, 1.6), lim.max_accel(10.0, 1.2), lim.max_accel(25.0, 0.8)
+  assert launch > 1.4            # strong off the line, like the owner's launches
+  assert 0.5 < mid < 0.75        # fading by 22 mph
+  assert cruise == pytest.approx(0.45)  # the 1 mph/s floor at highway speed
+  assert launch > mid > cruise
 
 
 def test_still_reaches_cruise():
   logs = run("zero_to_cruise", True)
   assert logs[-1, V] > 19.0
-  assert logs[:, A].max() > 0.40
+  assert logs[:, A].max() > 1.0
+
+
+def test_slower_than_stock_above_launch():
+  def t_to(logs, v):
+    return logs[np.argmax(logs[:, V] >= v), T]
+  on, ref = run("zero_to_cruise", True), np.load(REF)["zero_to_cruise"]
+  assert t_to(on, 5.0) < t_to(ref, 5.0) + 1.0     # launch close to stock
+  assert t_to(on, 19.0) > t_to(ref, 19.0) + 3.0   # but takes clearly longer to reach 42 mph
 
 
 def test_stock_exceeds_cap():
-  # proves the cap tests can fail: without the limit a launch goes well above it
-  assert run("fast_lead_launch", False)[:, A].max() > HARD_LIMIT + 0.2
+  # proves the cap tests can fail: without the limit the mid-speed pull is well above the curve
+  logs = run("zero_to_cruise", False)
+  mid = (logs[:, V] > 9.0) & (logs[:, V] < 12.0)
+  assert logs[mid, A].max() > 0.9
 
 
 def test_param_refresh():
   from openpilot.sunnypilot.selfdrive.controls.lib.crv_accel_limit import CrvAccelLimit
-  Params().put_bool("CrvAccelLimit", False)
+  params = Params()
+  params.put_bool("CrvAccelLimit", False)
   lim = CrvAccelLimit()
-  assert lim.max_accel(0., 1.6) == 1.6
-  Params().put_bool("CrvAccelLimit", True)
+  assert lim.max_accel(10., 1.2) == 1.2
+  params.put_bool("CrvAccelLimit", True)
+  params.put("CrvVirtualPedal", 22.5)
   for _ in range(61):  # 3 s at 20 Hz
     lim.update()
-  assert lim.max_accel(0., 1.6) == pytest.approx(HARD_LIMIT)
-  assert lim.max_accel(30., 1.6) < HARD_LIMIT
+  gentle = lim.max_accel(10., 1.2)
+  params.put("CrvVirtualPedal", 32.5)
+  for _ in range(61):
+    lim.update()
+  brisk = lim.max_accel(10., 1.2)
+  assert gentle == pytest.approx(0.45)   # 22.5 % gives 0.42, the floor holds it at 0.45
+  assert brisk == pytest.approx(0.88, abs=0.01)
+  params.put("CrvAccelFloor", 0.6)
+  for _ in range(61):
+    lim.update()
+  assert lim.max_accel(25., 0.8) == pytest.approx(0.6)
+
+
+def test_bad_param_values_fall_back():
+  from openpilot.sunnypilot.selfdrive.controls.lib.crv_accel_limit import CrvAccelLimit
+  params = Params()
+  params.put_bool("CrvAccelLimit", True)
+  params.put("CrvVirtualPedal", 500.0)
+  params.put("CrvAccelFloor", -3.0)
+  lim = CrvAccelLimit()
+  assert lim.pedal == 45.0 and lim.floor == 0.0
+  assert lim.max_accel(0., 1.6) <= 1.6
 
 
 def test_floor_constants_unchanged():

@@ -190,9 +190,17 @@
     "title": "Controls Ready",
     "description": ""
   },
+  "CrvAccelFloor": {
+    "title": "CR-V Acceleration Floor",
+    "description": "m/s^2. The acceleration limit never goes below this (0.45 = 1 mph/s)."
+  },
   "CrvAccelLimit": {
     "title": "CR-V Acceleration Limit",
-    "description": "Caps planned acceleration (table in crv_accel_limit.py). Braking limits unchanged."
+    "description": "Caps planned acceleration to what the car gives at a held pedal (CrvVirtualPedal). Braking limits unchanged."
+  },
+  "CrvVirtualPedal": {
+    "title": "CR-V Virtual Pedal",
+    "description": "Percent of accelerator travel the acceleration limit imitates (17.5 to 45; 28 = the owner's usual launch)."
   },
   "CurrentBootlog": {
     "title": "Current Bootlog",
