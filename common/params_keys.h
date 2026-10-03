@@ -228,6 +228,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CrvAccelLimit", {PERSISTENT, BOOL, "0"}},
     {"CrvVirtualPedal", {PERSISTENT, FLOAT, "28.0"}},
     {"CrvAccelFloor", {PERSISTENT, FLOAT, "0.45"}},
+    {"CrvCoastFirst", {PERSISTENT, BOOL, "0"}},
+    {"CrvCoastFirstTime", {PERSISTENT, FLOAT, "2.0"}},
 
     {"DynamicExperimentalControl", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"BlindSpot", {PERSISTENT | BACKUP, BOOL, "0"}},

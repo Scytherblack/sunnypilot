@@ -198,6 +198,14 @@
     "title": "CR-V Acceleration Limit",
     "description": "Caps planned acceleration to what the car gives at a held pedal (CrvVirtualPedal). Braking limits unchanged."
   },
+  "CrvCoastFirst": {
+    "title": "CR-V Coast First",
+    "description": "With Dynamic Experimental Control, the driving model's braking request starts as a coast for CrvCoastFirstTime seconds. Braking for a lead is never delayed."
+  },
+  "CrvCoastFirstTime": {
+    "title": "CR-V Coast First Time",
+    "description": "Seconds. How long a model braking request is held at coasting before it applies (0 to 4)."
+  },
   "CrvVirtualPedal": {
     "title": "CR-V Virtual Pedal",
     "description": "Percent of accelerator travel the acceleration limit imitates (17.5 to 45; 28 = the owner's usual launch)."
