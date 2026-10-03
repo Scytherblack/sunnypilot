@@ -197,6 +197,9 @@ class DynamicExperimentalController:
   def active(self) -> bool:
     return self._active
 
+  def urgency(self) -> float:
+    return self._urgency
+
   def set_mpc_fcw_crash_cnt(self) -> None:
     """Set MPC FCW crash count"""
     self._mpc_fcw_crash_cnt = self._mpc.crash_cnt
