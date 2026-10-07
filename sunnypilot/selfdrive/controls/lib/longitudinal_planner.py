@@ -11,6 +11,7 @@ from openpilot.common.constants import CV
 from openpilot.selfdrive.car.cruise import V_CRUISE_MAX
 from openpilot.sunnypilot.selfdrive.controls.lib.crv_accel_limit import CrvAccelLimit
 from openpilot.sunnypilot.selfdrive.controls.lib.crv_coast_first import CrvCoastFirst
+from openpilot.sunnypilot.selfdrive.controls.lib.crv_follow import CrvFollow
 from openpilot.sunnypilot.selfdrive.controls.lib.dec.dec import DynamicExperimentalController
 from openpilot.sunnypilot.selfdrive.controls.lib.e2e_alerts_helper import E2EAlertsHelper
 from openpilot.sunnypilot.selfdrive.controls.lib.smart_cruise_control.smart_cruise_control import SmartCruiseControl
@@ -36,6 +37,7 @@ class LongitudinalPlannerSP:
     self.e2e_alerts_helper = E2EAlertsHelper()
     self.crv_accel_limit = CrvAccelLimit()
     self.crv_coast_first = CrvCoastFirst()
+    self.crv_follow = CrvFollow()
 
     self.output_v_target = 0.
     self.output_a_target = 0.
@@ -83,6 +85,7 @@ class LongitudinalPlannerSP:
     self.e2e_alerts_helper.update(sm, self.events_sp)
     self.crv_accel_limit.update()
     self.crv_coast_first.update()
+    self.crv_follow.update()
 
   def publish_longitudinal_plan_sp(self, sm: messaging.SubMaster, pm: messaging.PubMaster) -> None:
     plan_sp_send = messaging.new_message('longitudinalPlanSP')

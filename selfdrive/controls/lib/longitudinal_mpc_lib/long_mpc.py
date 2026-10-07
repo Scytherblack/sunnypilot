@@ -314,8 +314,8 @@ class LongitudinalMpc:
     return lead_xv
 
   def update(self, radarstate, v_cruise, personality=log.LongitudinalPersonality.standard,
-             a_max=ACCEL_MAX, a_cruise_max=CRUISE_MAX_ACCEL):
-    t_follow = get_T_FOLLOW(personality)
+             a_max=ACCEL_MAX, a_cruise_max=CRUISE_MAX_ACCEL, t_follow=None):
+    t_follow = get_T_FOLLOW(personality) if t_follow is None else t_follow
     v_ego = self.x0[1]
     self.status = radarstate.leadOne.status or radarstate.leadTwo.status
 

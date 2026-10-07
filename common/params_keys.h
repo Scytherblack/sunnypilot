@@ -229,6 +229,8 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CrvVirtualPedal", {PERSISTENT, FLOAT, "28.0"}},
     {"CrvAccelFloor", {PERSISTENT, FLOAT, "0.45"}},
     {"CrvAccelScale", {PERSISTENT, FLOAT, "1.0"}},
+    {"CrvEvPowerKw", {PERSISTENT, FLOAT, "0.0"}},
+    {"CrvFollowLikeYou", {PERSISTENT, BOOL, "0"}},
     {"CrvCoastFirst", {PERSISTENT, BOOL, "0"}},
     {"CrvCoastFirstTime", {PERSISTENT, FLOAT, "2.0"}},
 

@@ -194,6 +194,14 @@
     "title": "CR-V Acceleration Floor",
     "description": "m/s^2. The acceleration limit never goes below this (0.45 = 1 mph/s)."
   },
+  "CrvEvPowerKw": {
+    "title": "CR-V EV Power Cap",
+    "description": "kW at the wheels. When above 0, acceleration is also capped so wheel power stays below this (14 keeps the hybrid in EV mode at 75-80% charge). 0 = off."
+  },
+  "CrvFollowLikeYou": {
+    "title": "CR-V Follow Like You",
+    "description": "Following time from the owner's own gaps: 1.75 s at 10 mph, 2.0 at 30, 2.5 at 40, 2.0 at 55, 1.75 at 65. Replaces the personality's value when on."
+  },
   "CrvAccelScale": {
     "title": "CR-V Acceleration Scale",
     "description": "The whole acceleration limit (pedal curve and floor) times this. 0.95 = 5% less at every speed. 0.5 to 1.0."

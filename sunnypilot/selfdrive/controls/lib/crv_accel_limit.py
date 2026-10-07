@@ -30,6 +30,14 @@ PEDAL_RANGE = (CRV_PEDAL_BP[0], CRV_PEDAL_BP[-1])
 FLOOR_RANGE = (0.0, 1.0)
 DEFAULT_SCALE = 1.0  # CrvAccelScale: the whole cap (pedal curve and floor) times this; 0.95 = 5 % less everywhere
 SCALE_RANGE = (0.5, 1.0)
+# CrvEvPowerKw (0 = off): also cap acceleration so that wheel power stays below this many kW, the way the
+# owner launches (he holds about 14 kW, which keeps the hybrid in EV mode at 75-80 % charge; the engine
+# started at 14-18 kW on 10-07). Road load fitted from 128 min of steady driving: kW = 0.244 v + 0.00030 v^3.
+DEFAULT_EV_KW = 0.0
+EV_KW_RANGE = (0.0, 60.0)
+CRV_MASS = 1839.0  # kg, from the car's fingerprint
+ROAD_LOAD_A = 0.244  # kW per m/s
+ROAD_LOAD_B = 0.00030  # kW per (m/s)^3
 
 
 def pedal_accel(v_ego: float, pedal: float) -> float:
@@ -47,6 +55,15 @@ def _read_float(params: Params, key: str, default: float, bounds: tuple[float, f
   return float(np.clip(value, *bounds))
 
 
+def road_load_kw(v_ego: float) -> float:
+  return ROAD_LOAD_A * v_ego + ROAD_LOAD_B * v_ego ** 3
+
+
+def ev_accel(v_ego: float, power_kw: float) -> float:
+  """Acceleration that keeps wheel power at `power_kw` (unbounded at a standstill)."""
+  return (power_kw - road_load_kw(v_ego)) * 1000.0 / (CRV_MASS * max(v_ego, 1.0))
+
+
 class CrvAccelLimit:
   def __init__(self):
     self.params = Params()
@@ -58,6 +75,7 @@ class CrvAccelLimit:
     self.pedal = _read_float(self.params, "CrvVirtualPedal", DEFAULT_PEDAL, PEDAL_RANGE)
     self.floor = _read_float(self.params, "CrvAccelFloor", DEFAULT_FLOOR, FLOOR_RANGE)
     self.scale = _read_float(self.params, "CrvAccelScale", DEFAULT_SCALE, SCALE_RANGE)
+    self.ev_kw = _read_float(self.params, "CrvEvPowerKw", DEFAULT_EV_KW, EV_KW_RANGE)
 
   def update(self) -> None:
     if self.frame % int(PARAMS_UPDATE_PERIOD / DT_MDL) == 0:
@@ -67,4 +85,7 @@ class CrvAccelLimit:
   def max_accel(self, v_ego: float, stock_max: float) -> float:
     if not self.enabled:
       return stock_max
-    return min(stock_max, self.scale * max(self.floor, pedal_accel(v_ego, self.pedal)))
+    cap = pedal_accel(v_ego, self.pedal)
+    if self.ev_kw > 0.0:
+      cap = min(cap, ev_accel(v_ego, self.ev_kw))
+    return min(stock_max, self.scale * max(self.floor, cap))
