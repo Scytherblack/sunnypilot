@@ -162,3 +162,33 @@ if __name__ == "__main__":
   ref = np.load(REF)
   for n in ref.files:
     print(f"{n}: max a {ref[n][:, A].max():.3f}, min a {ref[n][:, A].min():.3f}, end v {ref[n][-1, V]:.2f}")
+
+
+def test_scale_lowers_the_whole_cap():
+  from openpilot.sunnypilot.selfdrive.controls.lib.crv_accel_limit import CrvAccelLimit
+  p = Params()
+  p.put_bool("CrvAccelLimit", True)
+  assert float(p.get("CrvAccelScale", return_default=True)) == pytest.approx(1.0)
+  base = CrvAccelLimit()
+  p.put("CrvAccelScale", 0.95)
+  scaled = CrvAccelLimit()
+  for v, stock in ((0.0, 1.6), (2.0, 1.6), (6.0, 1.4), (10.0, 1.2), (15.0, 1.0), (25.0, 0.8), (30.0, 0.7)):
+    full = max(base.floor, base.max_accel(v, 9.9))
+    assert scaled.max_accel(v, 9.9) == pytest.approx(0.95 * full, rel=1e-6)   # 5 % less at every speed, floor included
+    assert scaled.max_accel(v, stock) <= stock + 1e-9                         # never above stock
+  p.put("CrvAccelScale", 0.2)   # out of range: clipped to 0.5, never off
+  assert CrvAccelLimit().max_accel(2.0, 9.9) == pytest.approx(0.5 * max(base.floor, base.max_accel(2.0, 9.9)))
+
+
+def test_scale_in_closed_loop():
+  Params().put("CrvAccelScale", 0.95)
+  try:
+    logs = run("zero_to_cruise", True)
+    from openpilot.sunnypilot.selfdrive.controls.lib.crv_accel_limit import DEFAULT_FLOOR, DEFAULT_PEDAL, pedal_accel
+    from openpilot.selfdrive.controls.lib.longitudinal_planner import get_max_accel
+    v_prev = logs[:-1, V]
+    cap = np.array([min(get_max_accel(v), 0.95 * max(DEFAULT_FLOOR, pedal_accel(v, DEFAULT_PEDAL))) for v in v_prev])
+    assert np.all(logs[1:, A] <= cap + 1e-6)
+    assert logs[-1, V] > 19.0
+  finally:
+    Params().put("CrvAccelScale", 1.0)

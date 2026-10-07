@@ -28,6 +28,8 @@ DEFAULT_PEDAL = 28.0  # % of travel, the owner's median during launches
 DEFAULT_FLOOR = 0.45  # m/s^2, 1 mph/s
 PEDAL_RANGE = (CRV_PEDAL_BP[0], CRV_PEDAL_BP[-1])
 FLOOR_RANGE = (0.0, 1.0)
+DEFAULT_SCALE = 1.0  # CrvAccelScale: the whole cap (pedal curve and floor) times this; 0.95 = 5 % less everywhere
+SCALE_RANGE = (0.5, 1.0)
 
 
 def pedal_accel(v_ego: float, pedal: float) -> float:
@@ -55,6 +57,7 @@ class CrvAccelLimit:
     self.enabled = self.params.get_bool("CrvAccelLimit")
     self.pedal = _read_float(self.params, "CrvVirtualPedal", DEFAULT_PEDAL, PEDAL_RANGE)
     self.floor = _read_float(self.params, "CrvAccelFloor", DEFAULT_FLOOR, FLOOR_RANGE)
+    self.scale = _read_float(self.params, "CrvAccelScale", DEFAULT_SCALE, SCALE_RANGE)
 
   def update(self) -> None:
     if self.frame % int(PARAMS_UPDATE_PERIOD / DT_MDL) == 0:
@@ -64,4 +67,4 @@ class CrvAccelLimit:
   def max_accel(self, v_ego: float, stock_max: float) -> float:
     if not self.enabled:
       return stock_max
-    return min(stock_max, max(self.floor, pedal_accel(v_ego, self.pedal)))
+    return min(stock_max, self.scale * max(self.floor, pedal_accel(v_ego, self.pedal)))

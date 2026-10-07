@@ -194,6 +194,10 @@
     "title": "CR-V Acceleration Floor",
     "description": "m/s^2. The acceleration limit never goes below this (0.45 = 1 mph/s)."
   },
+  "CrvAccelScale": {
+    "title": "CR-V Acceleration Scale",
+    "description": "The whole acceleration limit (pedal curve and floor) times this. 0.95 = 5% less at every speed. 0.5 to 1.0."
+  },
   "CrvAccelLimit": {
     "title": "CR-V Acceleration Limit",
     "description": "Caps planned acceleration to what the car gives at a held pedal (CrvVirtualPedal). Braking limits unchanged."
